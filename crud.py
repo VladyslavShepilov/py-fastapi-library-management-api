@@ -1,11 +1,19 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 import models
 import schemas
 
 
-def get_all_authors(db: Session):
-    return db.query(models.Author).all()
+def get_all_authors(db: Session, skip: int = 0, limit: int = 10):
+    return db.query(models.Author).offset(skip).limit(limit).all()
+
+
+def get_author(db: Session, author_id: int):
+    db_author = db.query(models.Author).filter(
+        models.Author.id == author_id
+    ).first()
+    return db_author
 
 
 def create_author(db: Session, author: schemas.AuthorBase):
@@ -45,11 +53,25 @@ def delete_author(db: Session, author_id: int):
     return False
 
 
-def get_all_books(db: Session):
-    return db.query(models.Book).all()
+def get_all_books(db: Session, skip: int = 0, limit: int = 10):
+    return db.query(models.Book).offset(skip).limit(limit).all()
+
+
+def get_books_by_author(db: Session, author_id: int, skip: int = 0, limit: int = 10):
+    return db.query(models.Book).filter(models.Book.author_id == author_id).offset(skip).limit(limit).all()
+
+
+def get_book(db: Session, book_id: int):
+    db_book = db.query(models.Book).filter(
+        models.Book.id == book_id
+    ).first()
+    return db_book
 
 
 def create_book(db: Session, book: schemas.BookBase):
+    author = get_author(db, book.author_id)
+    if author is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
     book_db = models.Book(
         title=book.title,
         summary=book.summary,
